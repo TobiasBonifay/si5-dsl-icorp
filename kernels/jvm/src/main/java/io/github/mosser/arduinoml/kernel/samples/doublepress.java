@@ -1,23 +1,30 @@
 package io.github.mosser.arduinoml.kernel.samples;
 
 import io.github.mosser.arduinoml.kernel.App;
-import io.github.mosser.arduinoml.kernel.behavioral.*;
+import io.github.mosser.arduinoml.kernel.behavioral.Action;
+import io.github.mosser.arduinoml.kernel.behavioral.State;
+import io.github.mosser.arduinoml.kernel.behavioral.Transition;
 import io.github.mosser.arduinoml.kernel.generator.ToWiring;
 import io.github.mosser.arduinoml.kernel.generator.Visitor;
-import io.github.mosser.arduinoml.kernel.structural.*;
+import io.github.mosser.arduinoml.kernel.structural.Actuator;
+import io.github.mosser.arduinoml.kernel.structural.SIGNAL;
+import io.github.mosser.arduinoml.kernel.structural.Sensor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
-public class Switch {
+public class doublepress {
 
 	public static void main(String[] args) {
 
 		// Declaring elementary bricks
-		Sensor button = new Sensor();
-		button.setName("button");
-		button.setPin(9);
+		Sensor button1 = new Sensor();
+		button1.setName("button1");
+		button1.setPin(9);
+
+		Sensor button2 = new Sensor();
+		button2.setName("button2");
+		button2.setPin(10);
 
 		Actuator led = new Actuator();
 		led.setName("LED");
@@ -46,13 +53,13 @@ public class Switch {
 		// Creating transitions
 		Transition on2off = new Transition();
 		on2off.setNext(off);
-		on2off.setSensors(new ArrayList<Sensor>(Arrays.asList(button)));
-		on2off.setValues(Arrays.asList(SIGNAL.HIGH));
+		on2off.setSensors(new ArrayList<Sensor>(Arrays.asList(button1, button2)));
+		on2off.setValues(Arrays.asList(SIGNAL.HIGH, SIGNAL.HIGH));
 
 		Transition off2on = new Transition();
 		off2on.setNext(on);
-		off2on.setSensors(new ArrayList<Sensor>(Arrays.asList(button)));
-		off2on.setValues(Arrays.asList(SIGNAL.HIGH));
+		off2on.setSensors(new ArrayList<Sensor>(Arrays.asList(button1, button2)));
+		off2on.setValues(Arrays.asList(SIGNAL.HIGH, SIGNAL.HIGH));
 
 		// Binding transitions to states
 		on.setTransition(on2off);
@@ -61,7 +68,7 @@ public class Switch {
 		// Building the App
 		App theSwitch = new App();
 		theSwitch.setName("Switch!");
-		theSwitch.setBricks(Arrays.asList(button, led ));
+		theSwitch.setBricks(Arrays.asList(button1, button2, led ));
 		theSwitch.setStates(Arrays.asList(on, off));
 		theSwitch.setInitial(off);
 

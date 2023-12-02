@@ -52,11 +52,11 @@ public class GroovuinoMLModel {
 		this.binding.setVariable(name, state);
 	}
 	
-	public void createTransition(State from, State to, Sensor sensor, SIGNAL value) {
+	public void createTransition(State from, State to, List<Sensor> sensors, List<SIGNAL> values) {
 		Transition transition = new Transition();
 		transition.setNext(to);
-		transition.setSensor(sensor);
-		transition.setValue(value);
+		transition.setSensors(sensors);
+		transition.setValues(values);
 		from.setTransition(transition);
 	}
 	
