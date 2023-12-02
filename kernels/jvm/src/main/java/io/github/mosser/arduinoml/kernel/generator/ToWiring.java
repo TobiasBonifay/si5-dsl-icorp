@@ -131,14 +131,16 @@ public class ToWiring extends Visitor<StringBuffer> {
 		}
 		if(context.get("pass") == PASS.TWO) {
 			w("\t\t\tboolean allSensorsActive = true;\n");
+			int i = 0; //counter
 			for (Sensor sensor : transition.getSensors()) {
 				String sensorName = sensor.getName();
 				w(String.format("\t\t\t%sBounceGuard = millis() - %sLastDebounceTime > debounce;\n",
 						sensorName, sensorName));
 				w(String.format("\t\t\tif(!(digitalRead(%d) == %s && %sBounceGuard)) {\n",
-						sensor.getPin(), transition.getValue(), sensorName));
+						sensor.getPin(), transition.getValue(i), sensorName));
 				w("\t\t\t\tallSensorsActive = false;\n");
 				w("\t\t\t}\n");
+				i+=1;
 			}
 			w("\t\t\tif(allSensorsActive) {\n");
 			w(String.format("\t\t\t\t%sLastDebounceTime = millis();\n", transition.getSensors().get(0).getName()));

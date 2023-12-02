@@ -54,12 +54,12 @@ public class doublepress {
 		Transition on2off = new Transition();
 		on2off.setNext(off);
 		on2off.setSensors(new ArrayList<Sensor>(Arrays.asList(button1, button2)));
-		on2off.setValue(SIGNAL.HIGH);
+		on2off.setValues(Arrays.asList(SIGNAL.HIGH, SIGNAL.HIGH));
 
 		Transition off2on = new Transition();
 		off2on.setNext(on);
 		off2on.setSensors(new ArrayList<Sensor>(Arrays.asList(button1, button2)));
-		off2on.setValue(SIGNAL.HIGH);
+		off2on.setValues(Arrays.asList(SIGNAL.HIGH, SIGNAL.HIGH));
 
 		// Binding transitions to states
 		on.setTransition(on2off);
