@@ -13,6 +13,14 @@ public class Transition implements Visitable {
 	private List<Sensor> sensors = new ArrayList<>();
 	private List<SIGNAL> values;
 
+	private boolean isMultipleOr = false;
+
+	public void setMultipleOr(boolean multipleOr) {
+		isMultipleOr = multipleOr;
+	}
+	public boolean getMultipleOr() {
+		return this.isMultipleOr;
+	}
 
 	public State getNext() {
 		return next;

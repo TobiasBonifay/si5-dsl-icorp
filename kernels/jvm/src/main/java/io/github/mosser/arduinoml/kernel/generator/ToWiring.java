@@ -164,7 +164,8 @@ public class ToWiring extends Visitor<StringBuffer> {
 			int i = 0; //counter
 			w("\t\t\tif("); // start of condition
 			for (Sensor sensor : transition.getSensors()) {
-				if (i != 0) { w(" && "); } // "&&" will be added if there are multiple conditions
+				if (i != 0 && transition.getMultipleOr()) { w(" || "); }
+				if (i != 0 && !transition.getMultipleOr()) { w(" && "); } // "&&" will be added if there are multiple conditions
 				String sensorName = sensor.getName();
 				w(String.format("(digitalRead(%d) == %s && %sBounceGuard)",
 						sensor.getPin(), transition.getValue(i), sensorName));
