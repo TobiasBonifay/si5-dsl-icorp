@@ -124,25 +124,53 @@ public class ToWiring extends Visitor<StringBuffer> {
 //		}
 //	}
 
+	//@Override
+	//public void visit(Transition transition) {
+	//	if(context.get("pass") == PASS.ONE) {
+	//		return;
+	//	}
+	//	if(context.get("pass") == PASS.TWO) {
+	//		w("\t\t\tboolean allSensorsActive = true;\n");
+	//		int i = 0; //counter
+	//		for (Sensor sensor : transition.getSensors()) {
+	//			String sensorName = sensor.getName();
+	//			w(String.format("\t\t\t%sBounceGuard = millis() - %sLastDebounceTime > debounce;\n",
+	//					sensorName, sensorName));
+	//			w(String.format("\t\t\tif(!(digitalRead(%d) == %s && %sBounceGuard)) {\n",
+	//					sensor.getPin(), transition.getValue(i), sensorName));
+	//			w("\t\t\t\tallSensorsActive = false;\n");
+	//			w("\t\t\t}\n");
+	//			i+=1;
+	//		}
+	//		w("\t\t\tif(allSensorsActive) {\n");
+	//		w(String.format("\t\t\t\t%sLastDebounceTime = millis();\n", transition.getSensors().get(0).getName()));
+	//		w("\t\t\t\tcurrentState = " + transition.getNext().getName() + ";\n");
+	//		w("\t\t\t}\n");
+	//		return;
+	//	}
+	//}
+
 	@Override
 	public void visit(Transition transition) {
 		if(context.get("pass") == PASS.ONE) {
 			return;
 		}
 		if(context.get("pass") == PASS.TWO) {
-			w("\t\t\tboolean allSensorsActive = true;\n");
-			int i = 0; //counter
 			for (Sensor sensor : transition.getSensors()) {
 				String sensorName = sensor.getName();
 				w(String.format("\t\t\t%sBounceGuard = millis() - %sLastDebounceTime > debounce;\n",
 						sensorName, sensorName));
-				w(String.format("\t\t\tif(!(digitalRead(%d) == %s && %sBounceGuard)) {\n",
+			}
+			int i = 0; //counter
+			w("\t\t\tif("); // start of condition
+			for (Sensor sensor : transition.getSensors()) {
+				if (i != 0) { w(" && "); } // "&&" will be added if there are multiple conditions
+				String sensorName = sensor.getName();
+				w(String.format("(digitalRead(%d) == %s && %sBounceGuard)",
 						sensor.getPin(), transition.getValue(i), sensorName));
-				w("\t\t\t\tallSensorsActive = false;\n");
-				w("\t\t\t}\n");
 				i+=1;
 			}
-			w("\t\t\tif(allSensorsActive) {\n");
+			w(") {\n"); // condition ends
 			w(String.format("\t\t\t\t%sLastDebounceTime = millis();\n", transition.getSensors().get(0).getName()));
 			w("\t\t\t\tcurrentState = " + transition.getNext().getName() + ";\n");
 			w("\t\t\t}\n");
