@@ -127,7 +127,7 @@ public class StructureAspectDescriptor extends BaseStructureAspectDescriptor {
     b.origin("r:c3f7684f-829d-4d32-b054-5894ce11edee(ArduinoML.structure)/2283284740571225907");
     b.version(3);
     b.aggregate("actions", 0x1fafdb5fcad1b496L).target(0x87da0c0a7e99440eL, 0xa46728249a7a2c96L, 0x1fafdb5fcad1b48bL).optional(true).ordered(true).multiple(true).origin("2283284740571247766").done();
-    b.aggregate("transition", 0x1fafdb5fcad1b499L).target(0x87da0c0a7e99440eL, 0xa46728249a7a2c96L, 0x1fafdb5fcad1b47cL).optional(false).ordered(true).multiple(false).origin("2283284740571247769").done();
+    b.aggregate("transition", 0x1fafdb5fcad1b499L).target(0x87da0c0a7e99440eL, 0xa46728249a7a2c96L, 0x1fafdb5fcad1b47cL).optional(false).ordered(true).multiple(true).origin("2283284740571247769").done();
     return b.create();
   }
   private static ConceptDescriptor createDescriptorForTransition() {

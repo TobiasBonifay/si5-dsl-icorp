@@ -14,16 +14,14 @@ public class Actuator_TextGen extends TextGenDescriptorBase {
   public void generateText(final TextGenContext ctx) {
     final TextGenSupport tgs = new TextGenSupport(ctx);
     tgs.indent();
-    tgs.append("int ");
+    tgs.append("pinMode(");
     tgs.append(SPropertyOperations.getString(ctx.getPrimaryInput(), PROPS.name$MnvL));
-    tgs.append("=");
-    tgs.append(String.valueOf(SPropertyOperations.getInteger(ctx.getPrimaryInput(), PROPS.pin$IZRo)));
-    tgs.append(";");
+    tgs.append(", ");
+    tgs.append("OUTPUT);");
     tgs.newLine();
   }
 
   private static final class PROPS {
     /*package*/ static final SProperty name$MnvL = MetaAdapterFactory.getProperty(0xceab519525ea4f22L, 0x9b92103b95ca8c0cL, 0x110396eaaa4L, 0x110396ec041L, "name");
-    /*package*/ static final SProperty pin$IZRo = MetaAdapterFactory.getProperty(0x87da0c0a7e99440eL, 0xa46728249a7a2c96L, 0x356a9ff97b4de414L, 0x356a9ff97b4e3931L, "pin");
   }
 }

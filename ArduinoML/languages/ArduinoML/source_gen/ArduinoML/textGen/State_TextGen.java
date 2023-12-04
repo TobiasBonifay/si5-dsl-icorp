@@ -30,7 +30,9 @@ public class State_TextGen extends TextGenDescriptorBase {
     tgs.append("boolean guard =  millis() - time > debounce;");
     tgs.newLine();
     tgs.indent();
-    tgs.appendNode(SLinkOperations.getTarget(ctx.getPrimaryInput(), LINKS.transition$BFpO));
+    for (SNode item : SLinkOperations.getChildren(ctx.getPrimaryInput(), LINKS.transition$BFpO)) {
+      tgs.appendNode(item);
+    }
     tgs.append("}");
     tgs.newLine();
     ctx.getBuffer().area().decreaseIndent();

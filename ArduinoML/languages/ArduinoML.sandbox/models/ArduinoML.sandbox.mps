@@ -39,20 +39,28 @@
     <property role="TrG5h" value="RedApp" />
     <ref role="3lvAZT" node="1YJQPZaODZr" resolve="off" />
     <node concept="1e9ard" id="3lEBZ_VjMCs" role="1e9ar3">
-      <property role="TrG5h" value="red_led" />
+      <property role="TrG5h" value="buzzer" />
       <property role="1e9ar8" value="12" />
     </node>
     <node concept="1e9arc" id="3lEBZ_VjMCy" role="1e9ar3">
-      <property role="TrG5h" value="button" />
+      <property role="TrG5h" value="button1" />
       <property role="1e9ar8" value="8" />
+    </node>
+    <node concept="1e9arc" id="5sHdtXEhWBU" role="1e9ar3">
+      <property role="TrG5h" value="button2" />
+      <property role="1e9ar8" value="9" />
     </node>
     <node concept="3lvChG" id="1YJQPZaODZr" role="3lvAZZ">
       <property role="TrG5h" value="off" />
       <node concept="3lvAZk" id="1YJQPZaODZ_" role="3lvAZ9">
-        <ref role="3lvAZd" node="3lEBZ_VjMCs" resolve="red_led" />
+        <ref role="3lvAZd" node="3lEBZ_VjMCs" resolve="buzzer" />
       </node>
       <node concept="3lvAWz" id="1YJQPZaODZs" role="3lvAZ6">
         <ref role="3lvAZu" node="3lEBZ_VjMCy" resolve="button" />
+        <ref role="3lvAZr" node="1YJQPZaODZv" resolve="on" />
+      </node>
+      <node concept="3lvAWz" id="5sHdtXEixjE" role="3lvAZ6">
+        <ref role="3lvAZu" node="5sHdtXEhWBU" resolve="button2" />
         <ref role="3lvAZr" node="1YJQPZaODZv" resolve="on" />
       </node>
     </node>
