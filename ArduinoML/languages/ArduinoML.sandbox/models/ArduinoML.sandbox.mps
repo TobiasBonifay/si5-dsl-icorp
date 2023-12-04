@@ -30,7 +30,7 @@
       </concept>
     </language>
     <language id="ceab5195-25ea-4f22-9b92-103b95ca8c0c" name="jetbrains.mps.lang.core">
-      <concept id="1169194658468" name="jetbrains.mps.lang.core.structure.INamedConcept" flags="ngI" index="TrEIO">
+      <concept id="1169194658468" name="jetbrains.mps.lang.core.structure.INamedConcept" flags="ng" index="TrEIO">
         <property id="1169194664001" name="name" index="TrG5h" />
       </concept>
     </language>
@@ -38,6 +38,16 @@
   <node concept="1e9are" id="3lEBZ_VjMCq">
     <property role="TrG5h" value="RedApp" />
     <ref role="3lvAZT" node="1YJQPZaODZr" resolve="off" />
+    <node concept="3lvChG" id="2itCtnYhvRP" role="3lvAZZ">
+      <property role="TrG5h" value="off" />
+      <node concept="3lvAZk" id="2itCtnYhvSa" role="3lvAZ9">
+        <ref role="3lvAZd" node="3lEBZ_VjMCs" resolve="buzzer" />
+      </node>
+      <node concept="3lvAWz" id="2itCtnYhvRQ" role="3lvAZ6">
+        <ref role="3lvAZu" node="3lEBZ_VjMCy" resolve="button1" />
+        <ref role="3lvAZr" node="1YJQPZaODZv" resolve="on" />
+      </node>
+    </node>
     <node concept="1e9ard" id="3lEBZ_VjMCs" role="1e9ar3">
       <property role="TrG5h" value="buzzer" />
       <property role="1e9ar8" value="12" />
@@ -50,20 +60,6 @@
       <property role="TrG5h" value="button2" />
       <property role="1e9ar8" value="9" />
     </node>
-    <node concept="3lvChG" id="1YJQPZaODZr" role="3lvAZZ">
-      <property role="TrG5h" value="off" />
-      <node concept="3lvAZk" id="1YJQPZaODZ_" role="3lvAZ9">
-        <ref role="3lvAZd" node="3lEBZ_VjMCs" resolve="buzzer" />
-      </node>
-      <node concept="3lvAWz" id="1YJQPZaODZs" role="3lvAZ6">
-        <ref role="3lvAZu" node="3lEBZ_VjMCy" resolve="button" />
-        <ref role="3lvAZr" node="1YJQPZaODZv" resolve="on" />
-      </node>
-      <node concept="3lvAWz" id="5sHdtXEixjE" role="3lvAZ6">
-        <ref role="3lvAZu" node="5sHdtXEhWBU" resolve="button2" />
-        <ref role="3lvAZr" node="1YJQPZaODZv" resolve="on" />
-      </node>
-    </node>
     <node concept="3lvChG" id="1YJQPZaODZv" role="3lvAZZ">
       <property role="TrG5h" value="on" />
       <node concept="3lvAZk" id="1YJQPZaODZB" role="3lvAZ9">
@@ -71,7 +67,7 @@
       </node>
       <node concept="3lvAWz" id="1YJQPZaODZw" role="3lvAZ6">
         <ref role="3lvAZu" node="3lEBZ_VjMCy" resolve="button" />
-        <ref role="3lvAZr" node="1YJQPZaODZr" resolve="off" />
+        <ref role="3lvAZr" node="2itCtnYhvRP" resolve="off" />
       </node>
     </node>
   </node>
