@@ -11,15 +11,42 @@ import io.github.mosser.arduinoml.kernel.structural.Sensor
 import io.github.mosser.arduinoml.kernel.structural.SIGNAL
 
 abstract class GroovuinoMLBasescript extends Script {
-	// sensor "name" pin n
+
+	List<Integer> freePins = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+
 	def sensor(String name) {
-		[pin: { n -> ((GroovuinoMLBinding)this.getBinding()).getGroovuinoMLModel().createSensor(name, n) },
-		onPin: { n -> ((GroovuinoMLBinding)this.getBinding()).getGroovuinoMLModel().createSensor(name, n)}]
+		assignPin(name, null, true)
+	}
+
+	def sensor(String name, int pin) {
+		assignPin(name, pin, true)
 	}
 	
-	// actuator "name" pin n
 	def actuator(String name) {
-		[pin: { n -> ((GroovuinoMLBinding)this.getBinding()).getGroovuinoMLModel().createActuator(name, n) }]
+		assignPin(name, null, false)
+	}
+
+	def actuator(String name, int pin) {
+		assignPin(name, pin, false)
+	}
+
+	def assignPin(String name, Integer pin, Boolean isSensor) {
+		if (pin == null) {
+			if (freePins.isEmpty()) {
+				throw new RuntimeException("No free pins available")
+			}
+			pin = freePins.remove(0)
+		} else {
+			if (!freePins.contains(pin)) {
+				throw new RuntimeException("Pin $pin is not available")
+			}
+			freePins.removeAll(pin)
+		}
+		if (isSensor) {
+			((GroovuinoMLBinding)this.getBinding()).getGroovuinoMLModel().createSensor(name, pin)
+		} else {
+			((GroovuinoMLBinding) this.getBinding()).getGroovuinoMLModel().createActuator(name, pin)
+		}
 	}
 	
 	// state "name" means actuator becomes signal [and actuator becomes signal]*n
