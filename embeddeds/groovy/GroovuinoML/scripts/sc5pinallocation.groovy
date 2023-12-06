@@ -1,5 +1,5 @@
-sensor "button",1
-actuator "led",2
+sensor "button","digital"
+actuator "led","analog"
 
 state "on" means "led" becomes "high"
 state "off" means "led" becomes "low"
