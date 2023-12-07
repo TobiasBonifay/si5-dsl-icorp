@@ -31,10 +31,10 @@ public class ModelBuilder extends ArduinomlBaseListener {
     private final Map<Integer, String> analogPins = new HashMap<>();
 
     public ModelBuilder() {
-        for (int i = 1; i <= 13; i++) {
+        for (int i = 8; i <= 13; i++) {
             digitalPins.put(i, "available");
         }
-        for (int i = 0; i <= 5; i++) {
+        for (int i = 1; i <= 5; i++) {
             analogPins.put(i, "available");
         }
     }

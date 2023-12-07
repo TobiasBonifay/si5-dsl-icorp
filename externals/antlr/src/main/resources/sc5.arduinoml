@@ -1,7 +1,7 @@
 application "pinallocation"
 
-sensor "lightsensor","analog"
-actuator "led","digital"
+sensor "lightsensor",analog
+actuator "led",digital
 
 state "on" means "led" becomes HIGH
 state "off" means "led" becomes LOW

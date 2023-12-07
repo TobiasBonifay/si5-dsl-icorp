@@ -9,8 +9,8 @@ root            : declaration bricks states initialState transitions EOF;
 declaration     : APPLICATION name=STRING;
 
 bricks          : (sensor | actuator)+;
-sensor          : SENSOR STRING ',' port=PORT;
-actuator        : ACTUATOR STRING ',' port=PORT;
+sensor          : SENSOR STRING ',' port='analog';
+actuator        : ACTUATOR STRING ',' port='digital';
 
 
 states          : state+;
@@ -44,13 +44,6 @@ MEANS           : 'means';
 
 STRING          : '"' (LOWERCASE | UPPERCASE | DIGIT | '_' | '-')* '"';
 SIGNAL          : 'HIGH' | 'LOW';
-
-PORT : (ANALOG | DIGITAL) ' ' PORT_NUMBER | PORT_NUMBER | ANALOG_PIN;
-PORT_TYPE   : DIGITAL | ANALOG;
-DIGITAL     : 'digital';
-ANALOG      : 'analog';
-PORT_NUMBER : [0-9] | '1' [0-3]; // Covers 0 to 13
-ANALOG_PIN  : 'A' [0-5];         // Covers A0 to A5
 
 
 /*************
