@@ -2,8 +2,8 @@ application switch
 
 # declaring bricks
 sensor button: 9
-actuator led: 12
-actuator buzzer: 13
+actuator led: 10
+actuator buzzer: 11
 
 # Declaring states
 on1 {
