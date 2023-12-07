@@ -1,21 +1,13 @@
-application sc2
+application "sc2"
 
-# declaring bricks
-sensor button1: 9
-sensor button2: 10
-actuator buzzer: 11
+sensor "button1", 9
+sensor "button2", 10
+actuator "buzzer", 11
 
-# Declaring states
-on {
-    buzzer <= HIGH
-}
+state "on" means "buzzer" becomes HIGH
+state "off" means "buzzer" becomes LOW
 
--> off {
-    buzzer <= LOW
-}
+initial "off"
 
-# Declaring transitions
-initial off
-
-from off to on when button1 becomes HIGH and button2 becomes HIGH
-from on to off when button1 becomes LOW or button2 becomes LOW
+from "off" to "on" when "button1" becomes HIGH and "button2" becomes HIGH
+from "on" to "off" when "button1" becomes LOW or "button2" becomes LOW

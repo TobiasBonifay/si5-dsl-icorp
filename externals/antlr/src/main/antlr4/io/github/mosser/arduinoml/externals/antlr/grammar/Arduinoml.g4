@@ -4,50 +4,46 @@ grammar Arduinoml;
  ** Parser rules **
  ******************/
 
-root : declaration bricks states initialState transitions EOF;
+root            : declaration bricks states initialState transitions EOF;
 
-declaration     :   APPLICATION name=IDENTIFIER;
+declaration     : APPLICATION name=STRING;
 
-bricks          :   (sensor | actuator)+;
-    sensor      :   SENSOR location ;
-    actuator    :   ACTUATOR location ;
-    location    :   id=IDENTIFIER COLON port=PORT_NUMBER;
+bricks          : (sensor | actuator)+;
+sensor          : SENSOR STRING ',' PORT_NUMBER;
+actuator        : ACTUATOR STRING ',' PORT_NUMBER;
 
-states          :   state+;
-    state  : initial? name=IDENTIFIER '{' action* transition? '}';
-    action      :   receiver=IDENTIFIER LEQ value=SIGNAL;
-    initialState : INITIAL name=IDENTIFIER;
-    initial     :   ARROW;
-    transitions : transition+;
-        transition : FROM source=IDENTIFIER TO target=IDENTIFIER WHEN condition;
-        condition  : singleCondition ( (AND | OR) singleCondition )*;
-        singleCondition : sensorName=IDENTIFIER BECOMES value=SIGNAL;
-        compoundTransition : FROM source=IDENTIFIER TO target=IDENTIFIER WHEN condition;
+states          : state+;
+state           : STATE STRING MEANS actions;
+actions         : action (AND action)*;
+action          : STRING BECOMES SIGNAL;
 
+initialState    : INITIAL STRING;
+
+transitions     : transition+;
+transition      : FROM STRING TO STRING WHEN condition;
+condition       : singleCondition ( (AND | OR) singleCondition )*;
+singleCondition : STRING BECOMES SIGNAL;
 
 /*****************
  ** Lexer rules **
  *****************/
-INITIAL         : 'initial';
+
 APPLICATION     : 'application';
 SENSOR          : 'sensor';
 ACTUATOR        : 'actuator';
-COLON           : ':';
-LBRACE          : '{';
-RBRACE          : '}';
-LEQ             : '<=';
-ARROW           : '->';
-IS              : 'is';
+STATE           : 'state';
+INITIAL         : 'initial';
 FROM            : 'from';
 TO              : 'to';
 WHEN            : 'when';
 AND             : 'and';
 OR              : 'or';
 BECOMES         : 'becomes';
+MEANS           : 'means';
 
-PORT_NUMBER     : [1-9] | '10' | '11' | '12' | '13' | 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5';
-IDENTIFIER      : LOWERCASE (LOWERCASE | UPPERCASE | DIGIT)*;
+STRING          : '"' (LOWERCASE | UPPERCASE | DIGIT | '_' | '-')* '"';
 SIGNAL          : 'HIGH' | 'LOW';
+PORT_NUMBER     : [1-9] | '10' | '11' | '12' | '13' | 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5';
 
 /*************
  ** Helpers **

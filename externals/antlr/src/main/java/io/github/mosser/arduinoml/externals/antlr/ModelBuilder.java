@@ -74,27 +74,35 @@ public class ModelBuilder extends ArduinomlBaseListener {
     @Override
     public void enterSensor(ArduinomlParser.SensorContext ctx) {
         Sensor sensor = new Sensor();
-        sensor.setName(ctx.location().id.getText());
-        sensor.setPin(Integer.parseInt(ctx.location().port.getText()));
-        this.theApp.getBricks().add(sensor);
-        sensors.put(sensor.getName(), sensor); // TODO: 1 sensor -> 1..n transitions
+        sensor.setName(ctx.STRING().getText().replace("\"", ""));
+        sensor.setPin(Integer.parseInt(ctx.PORT_NUMBER().getText()));
+        theApp.getBricks().add(sensor);
+        sensors.put(sensor.getName(), sensor);
     }
 
     @Override
     public void enterActuator(ArduinomlParser.ActuatorContext ctx) {
         Actuator actuator = new Actuator();
-        actuator.setName(ctx.location().id.getText());
-        actuator.setPin(Integer.parseInt(ctx.location().port.getText()));
-        this.theApp.getBricks().add(actuator);
+        actuator.setName(ctx.STRING().getText().replace("\"", ""));
+        actuator.setPin(Integer.parseInt(ctx.PORT_NUMBER().getText()));
+        theApp.getBricks().add(actuator);
         actuators.put(actuator.getName(), actuator);
     }
 
     @Override
     public void enterState(ArduinomlParser.StateContext ctx) {
-        State local = new State();
-        local.setName(ctx.name.getText());
-        this.currentState = local;
-        this.states.put(local.getName(), local);
+        State state = new State();
+        state.setName(ctx.STRING().getText().replace("\"", ""));
+        this.currentState = state;
+        states.put(state.getName(), state);
+    }
+
+    @Override
+    public void enterAction(ArduinomlParser.ActionContext ctx) {
+        Action action = new Action();
+        action.setActuator(actuators.get(ctx.STRING().getText().replace("\"", "")));
+        action.setValue(SIGNAL.valueOf(ctx.SIGNAL().getText()));
+        currentState.getActions().add(action);
     }
 
     @Override
@@ -104,24 +112,17 @@ public class ModelBuilder extends ArduinomlBaseListener {
     }
 
     @Override
-    public void enterAction(ArduinomlParser.ActionContext ctx) {
-        Action action = new Action();
-        action.setActuator(actuators.get(ctx.receiver.getText()));
-        action.setValue(SIGNAL.valueOf(ctx.value.getText()));
-        currentState.getActions().add(action);
-    }
-
-    @Override
     public void enterTransition(ArduinomlParser.TransitionContext ctx) {
         Transition transition = new Transition();
-        transition.setNext(states.get(ctx.target.getText()));
+        transition.setNext(states.get(ctx.STRING(1).getText().replace("\"", "")));
 
         List<Sensor> transitionSensors = new ArrayList<>();
         List<SIGNAL> transitionSignals = new ArrayList<>();
 
-        for (ArduinomlParser.SingleConditionContext conditionCtx : ctx.condition().singleCondition()) {
-            Sensor sensor = sensors.get(conditionCtx.sensorName.getText());
-            SIGNAL signal = SIGNAL.valueOf(conditionCtx.value.getText());
+        ArduinomlParser.ConditionContext conditionCtx = ctx.condition();
+        for (ArduinomlParser.SingleConditionContext singleCondition : conditionCtx.singleCondition()) {
+            Sensor sensor = sensors.get(singleCondition.STRING().getText().replace("\"", ""));
+            SIGNAL signal = SIGNAL.valueOf(singleCondition.SIGNAL().getText());
 
             transitionSensors.add(sensor);
             transitionSignals.add(signal);
@@ -130,7 +131,7 @@ public class ModelBuilder extends ArduinomlBaseListener {
         transition.setSensors(transitionSensors);
         transition.setValues(transitionSignals);
 
-        boolean isOrCondition = ctx.condition().getText().contains("or");
+        boolean isOrCondition = !conditionCtx.OR().isEmpty();
         transition.setMultipleOr(isOrCondition);
 
         if (null == currentState) {
@@ -139,7 +140,7 @@ public class ModelBuilder extends ArduinomlBaseListener {
 
         if (currentState.getTransition() != null) {
             Binding binding = new Binding();
-            binding.to = ctx.target.getText();
+            binding.to = ctx.STRING(1).getText().replace("\"", "");
             binding.triggers = transitionSensors;
             binding.value = transitionSignals.get(0);
             bindings.put(currentState.getName(), binding);
@@ -148,39 +149,9 @@ public class ModelBuilder extends ArduinomlBaseListener {
         }
     }
 
-
-    @Override
-    public void enterCompoundTransition(ArduinomlParser.CompoundTransitionContext ctx) {
-        Transition transition = new Transition();
-        transition.setNext(states.get(ctx.target.getText()));
-
-        List<Sensor> transitionSensors = new ArrayList<>();
-        List<SIGNAL> transitionValues = new ArrayList<>();
-
-        for (ArduinomlParser.SingleConditionContext condition : ctx.condition().singleCondition()) {
-            Sensor sensor = sensors.get(condition.sensorName.getText());
-            SIGNAL signal = SIGNAL.valueOf(condition.value.getText());
-            transitionSensors.add(sensor);
-            transitionValues.add(signal);
-        }
-
-        transition.setSensors(transitionSensors);
-        transition.setValues(transitionValues);
-
-        transition.setMultipleOr(ctx.condition().getText().contains("or"));
-
-        currentState.setTransition(transition);
-    }
-
-
-    @Override
-    public void enterInitial(ArduinomlParser.InitialContext ctx) {
-        this.theApp.setInitial(this.currentState);
-    }
-
     @Override
     public void enterInitialState(ArduinomlParser.InitialStateContext ctx) {
-        String initialStateName = ctx.name.getText();
+        String initialStateName = ctx.STRING().getText().replace("\"", "");
         State initialState = states.get(initialStateName);
         if (initialState != null) {
             theApp.setInitial(initialState);

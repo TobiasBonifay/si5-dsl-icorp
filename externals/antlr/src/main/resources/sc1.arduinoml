@@ -1,23 +1,13 @@
-application sc1
+application "sc1"
 
-# declaring bricks
-sensor button: 9
-actuator led: 12
-actuator buzzer: 13
+sensor "button",9
+actuator "led",10
+actuator "buzzer",11
 
-# Declaring states
-on {
-    led <= HIGH
-    buzzer <= HIGH
-}
+state "on" means "led" becomes HIGH and "buzzer" becomes HIGH
+state "off" means "led" becomes LOW and "buzzer" becomes LOW
 
--> off {
-    led <= LOW
-    buzzer <= LOW
-}
+initial "off"
 
-# Declaring transitions
-initial off
-
-from on to off when button becomes LOW
-from off to on when button becomes HIGH
+from "on" to "off" when "button" becomes LOW
+from "off" to "on" when "button" becomes HIGH
