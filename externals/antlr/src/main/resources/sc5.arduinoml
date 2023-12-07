@@ -1,0 +1,12 @@
+application "pinallocation"
+
+sensor "lightsensor","analog"
+actuator "led","digital"
+
+state "on" means "led" becomes HIGH
+state "off" means "led" becomes LOW
+
+initial "off"
+
+from "on" to "off" when "lightsensor" becomes HIGH
+from "off" to "on" when "lightsensor" becomes HIGH

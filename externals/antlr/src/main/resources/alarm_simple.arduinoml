@@ -1,21 +1,13 @@
-application alarmSimple
+application "alarmSimple"
 
-# declaring bricks
-sensor button1: 9
-actuator button2: 10
-actuator buzzer: 13
+sensor "button" onPin 9
+actuator "led" pin 12
+actuator "buzzer" pin 13
 
-# Declaring states
-on {
-    buzzer <= HIGH
-}
+state "on" means "led" becomes "HIGH" and "buzzer" becomes "HIGH"
+state "off" means led becomes LOW and buzzer becomes LOW
 
--> off {
-    buzzer <= LOW
-}
+initial "off"
 
-# Declaring transitions
-initial off
-
-from off to on when button1 becomes HIGH and button2 becomes HIGH
-from on to off when button1 becomes LOW
+from "on" to "off" when "button" becomes LOW
+from off to on when button becomes HIGH
