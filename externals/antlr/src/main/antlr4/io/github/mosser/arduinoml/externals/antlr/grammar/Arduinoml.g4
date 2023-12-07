@@ -4,46 +4,50 @@ grammar Arduinoml;
  ** Parser rules **
  ******************/
 
-root            :   declaration bricks states transitions EOF;
+root            :   declaration bricks states EOF;
 
-declaration     :   APPLICATION identifier;
-identifier      :   IDENTIFIER | QUOTED_IDENTIFIER;
+declaration     :   APPLICATION name=IDENTIFIER;
 
 bricks          :   (sensor | actuator)+;
-sensor          :   SENSOR location;
-actuator        :   ACTUATOR location;
-location        :   id=IDENTIFIER COLON port=PORT_NUMBER;
+    sensor      :   SENSOR location ;
+    actuator    :   ACTUATOR location ;
+    location    :   id=IDENTIFIER COLON port=PORT_NUMBER;
 
 states          :   state+;
-state           :   initial? name=IDENTIFIER '{' action* '}';
-action          :   receiver=IDENTIFIER LEQ value=SIGNAL;
-initial         :   ARROW;
+    state       :   initial? name=IDENTIFIER '{'  action* transition? '}';
+    action      :   receiver=IDENTIFIER LEQ value=SIGNAL;
+    initial     :   ARROW;
 
-transitions     :   transition+;
-transition      :   FROM source=IDENTIFIER TO target=IDENTIFIER WHEN condition;
-condition       :   singleCondition ( (AND | OR) singleCondition )*;
-singleCondition :   sensorName=IDENTIFIER BECOMES value=SIGNAL;
+    transition  :   trigger=IDENTIFIER IS value=SIGNAL ARROW next=IDENTIFIER ;
+
+    compoundTransition : FROM source=IDENTIFIER TO target=IDENTIFIER WHEN condition;
+    condition   :   singleCondition ( (AND | OR) singleCondition )*;
+    singleCondition : sensorName=IDENTIFIER BECOMES value=SIGNAL;
 
 /*****************
  ** Lexer rules **
  *****************/
 
+// Définissez explicitement les tokens
 APPLICATION     : 'application';
 SENSOR          : 'sensor';
 ACTUATOR        : 'actuator';
 COLON           : ':';
-PORT_NUMBER     : [1-9] | '10' | '11' | '12' | '13' | 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5';
-IDENTIFIER      : (LOWERCASE | UPPERCASE | DIGIT | '_' | '-')+;
-QUOTED_IDENTIFIER : '"' (LOWERCASE | UPPERCASE | DIGIT | '_' | '-')* '"';
-SIGNAL          : 'HIGH' | 'LOW';
+LBRACE          : '{';
+RBRACE          : '}';
 LEQ             : '<=';
 ARROW           : '->';
+IS              : 'is';
 FROM            : 'from';
 TO              : 'to';
 WHEN            : 'when';
 AND             : 'and';
 OR              : 'or';
 BECOMES         : 'becomes';
+
+PORT_NUMBER     : [1-9] | '10' | '11' | '12' | '13' | 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5';
+IDENTIFIER      : LOWERCASE (LOWERCASE | UPPERCASE | DIGIT)*;
+SIGNAL          : 'HIGH' | 'LOW';
 
 /*************
  ** Helpers **
