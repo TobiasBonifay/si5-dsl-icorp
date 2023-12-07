@@ -1,0 +1,23 @@
+<dsl> ::= <device-definition>* <state-definition>* <initial-state> <transition>* <export>
+
+<device-definition> ::= ("sensor" | "actuator") <device-name> "," (<number> | <device-type>)
+
+<state-definition> ::= "state" <state-name> "means" (<single-action> | <compound-action>)
+<single-action> ::= <device-name> "becomes" <signal-value>
+<compound-action> ::= <single-action> "and" <single-action>
+
+<initial-state> ::= "initial" <state-name>
+
+<transition> ::= "from" <state-name> "to" <state-name> "when" (<single-condition> | <compound-condition>)
+<single-condition> ::= <device-name> "becomes" <signal-value>
+<compound-condition> ::= <single-condition> (("and" | "or") <single-condition>)*
+
+<export> ::= "export" <scenario-name>
+
+<string> ::= '"' [a-zA-Z0-9_]+ '"'
+<device-name> ::= <string>
+<number> ::= [0-9]+
+<device-type> ::= "digital" | "analog"
+<state-name> ::= <string>
+<signal-value> ::= "high" | "low"
+<scenario-name> ::= <string>

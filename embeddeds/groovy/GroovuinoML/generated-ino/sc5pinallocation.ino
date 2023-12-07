@@ -6,29 +6,29 @@ long debounce = 200;
 enum STATE {on, off};
 STATE currentState = off;
 
-boolean buttonBounceGuard = false;
-long buttonLastDebounceTime = 0;
+boolean lightsensorBounceGuard = false;
+long lightsensorLastDebounceTime = 0;
 
 void setup(){
-  pinMode(8, INPUT);  // button [Sensor]
-  pinMode(1, OUTPUT); // led [Actuator]
+  pinMode(1, INPUT);  // lightsensor [Sensor]
+  pinMode(8, OUTPUT); // led [Actuator]
 }
 
 void loop() {
 	switch(currentState){
 		case on:
-			digitalWrite(1,HIGH);
-			buttonBounceGuard = millis() - buttonLastDebounceTime > debounce;
-			if((digitalRead(8) == HIGH && buttonBounceGuard)) {
-				buttonLastDebounceTime = millis();
+			digitalWrite(8,HIGH);
+			lightsensorBounceGuard = millis() - lightsensorLastDebounceTime > debounce;
+			if((digitalRead(1) == HIGH && lightsensorBounceGuard)) {
+				lightsensorLastDebounceTime = millis();
 				currentState = off;
 			}
 		break;
 		case off:
-			digitalWrite(1,LOW);
-			buttonBounceGuard = millis() - buttonLastDebounceTime > debounce;
-			if((digitalRead(8) == HIGH && buttonBounceGuard)) {
-				buttonLastDebounceTime = millis();
+			digitalWrite(8,LOW);
+			lightsensorBounceGuard = millis() - lightsensorLastDebounceTime > debounce;
+			if((digitalRead(1) == HIGH && lightsensorBounceGuard)) {
+				lightsensorLastDebounceTime = millis();
 				currentState = on;
 			}
 		break;
