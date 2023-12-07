@@ -27,6 +27,78 @@ public class ModelBuilder extends ArduinomlBaseListener {
         throw new RuntimeException("Cannot retrieve a model that was not created!");
     }
 
+    private final Map<Integer, String> digitalPins = new HashMap<>();
+    private final Map<Integer, String> analogPins = new HashMap<>();
+
+    public ModelBuilder() {
+        for (int i = 1; i <= 13; i++) {
+            digitalPins.put(i, "available");
+        }
+        for (int i = 0; i <= 5; i++) {
+            analogPins.put(i, "available");
+        }
+    }
+
+    private int assignPin(String portType) throws RuntimeException {
+        if ("digital".equalsIgnoreCase(portType)) {
+            return digitalPins.entrySet().stream()
+                    .filter(entry -> "available".equals(entry.getValue()))
+                    .findFirst()
+                    .map(Map.Entry::getKey)
+                    .orElseThrow(() -> new RuntimeException("No available digital pins"));
+        } else if ("analog".equalsIgnoreCase(portType)) {
+            return analogPins.entrySet().stream()
+                    .filter(entry -> "available".equals(entry.getValue()))
+                    .findFirst()
+                    .map(Map.Entry::getKey)
+                    .orElseThrow(() -> new RuntimeException("No available analog pins"));
+        } else {
+            throw new RuntimeException("Invalid port type: " + portType);
+        }
+    }
+
+    private void markPinAsUsed(int pin, String portType) {
+        if ("digital".equalsIgnoreCase(portType)) {
+            digitalPins.put(pin, "used");
+        } else if ("analog".equalsIgnoreCase(portType)) {
+            analogPins.put(pin, "used");
+        }
+    }
+
+    private int parsePort(String port) {
+        // Check if the port is just a number (explicit port number)
+        if (port.matches("\\d+")) {
+            return Integer.parseInt(port);
+        }
+
+        // Check if the port specifies the type without a number (automatic pin assignment)
+        if (port.equalsIgnoreCase("digital") || port.equalsIgnoreCase("analog")) {
+            return assignPin(port);
+        }
+
+        // Port type and number are specified
+        String[] parts = port.split(":");
+        if (parts.length != 2) {
+            throw new RuntimeException("Invalid port definition: " + port);
+        }
+        String portType = parts[0];
+        int pin = Integer.parseInt(parts[1]);
+        if (pin < 0) {
+            throw new RuntimeException("Invalid pin number: " + pin);
+        }
+        if (pin > 13 && "digital".equalsIgnoreCase(portType)) {
+            throw new RuntimeException("Invalid digital pin number: " + pin);
+        }
+        if (pin > 5 && "analog".equalsIgnoreCase(portType)) {
+            throw new RuntimeException("Invalid analog pin number: " + pin);
+        }
+        if ("available".equalsIgnoreCase(digitalPins.get(pin)) && "available".equalsIgnoreCase(analogPins.get(pin))) {
+            markPinAsUsed(pin, portType);
+            return pin;
+        } else {
+            throw new RuntimeException("Pin " + pin + " is already used");
+        }
+    }
     /*******************
      ** Symbol tables **
      *******************/
@@ -75,7 +147,10 @@ public class ModelBuilder extends ArduinomlBaseListener {
     public void enterSensor(ArduinomlParser.SensorContext ctx) {
         Sensor sensor = new Sensor();
         sensor.setName(ctx.STRING().getText().replace("\"", ""));
-        sensor.setPin(Integer.parseInt(ctx.PORT_NUMBER().getText()));
+
+        String port = ctx.port.getText();
+        sensor.setPin(parsePort(port));
+
         theApp.getBricks().add(sensor);
         sensors.put(sensor.getName(), sensor);
     }
@@ -84,7 +159,10 @@ public class ModelBuilder extends ArduinomlBaseListener {
     public void enterActuator(ArduinomlParser.ActuatorContext ctx) {
         Actuator actuator = new Actuator();
         actuator.setName(ctx.STRING().getText().replace("\"", ""));
-        actuator.setPin(Integer.parseInt(ctx.PORT_NUMBER().getText()));
+
+        String port = ctx.port.getText();
+        actuator.setPin(parsePort(port));
+
         theApp.getBricks().add(actuator);
         actuators.put(actuator.getName(), actuator);
     }
@@ -99,35 +177,41 @@ public class ModelBuilder extends ArduinomlBaseListener {
 
     @Override
     public void enterAction(ArduinomlParser.ActionContext ctx) {
+        if (currentState == null) {
+            throw new RuntimeException("Action defined outside of any state");
+        }
         Action action = new Action();
-        action.setActuator(actuators.get(ctx.STRING().getText().replace("\"", "")));
+        String actuatorName = ctx.STRING().getText().replace("\"", "");
+        action.setActuator(actuators.get(actuatorName));
         action.setValue(SIGNAL.valueOf(ctx.SIGNAL().getText()));
         currentState.getActions().add(action);
     }
 
     @Override
     public void exitState(ArduinomlParser.StateContext ctx) {
-        this.theApp.getStates().add(this.currentState);
+        theApp.getStates().add(this.currentState);
         this.currentState = null;
     }
 
     @Override
     public void enterTransition(ArduinomlParser.TransitionContext ctx) {
         String sourceStateName = ctx.STRING(0).getText().replace("\"", "");
-        String targetStateName = ctx.STRING(1).getText().replace("\"", "");
-
         State sourceState = states.get(sourceStateName);
-        State targetState = states.get(targetStateName);
+        if (sourceState == null) {
+            throw new RuntimeException("Source state '" + sourceStateName + "' not defined");
+        }
 
-        if (sourceState == null || targetState == null) {
-            throw new RuntimeException("State '" + (sourceState == null ? sourceStateName : targetStateName) + "' not defined");
+        String targetStateName = ctx.STRING(1).getText().replace("\"", "");
+        State targetState = states.get(targetStateName);
+        if (targetState == null) {
+            throw new RuntimeException("Target state '" + targetStateName + "' not defined");
         }
 
         Transition transition = new Transition();
         transition.setNext(targetState);
 
         List<Sensor> transitionSensors = new ArrayList<>();
-        List<SIGNAL> transitionSignals = new ArrayList<>();
+        List<SIGNAL> transitionValues = new ArrayList<>();
 
         for (ArduinomlParser.SingleConditionContext singleCondition : ctx.condition().singleCondition()) {
             String sensorName = singleCondition.STRING().getText().replace("\"", "");
@@ -138,11 +222,11 @@ public class ModelBuilder extends ArduinomlBaseListener {
             SIGNAL signal = SIGNAL.valueOf(singleCondition.SIGNAL().getText());
 
             transitionSensors.add(sensor);
-            transitionSignals.add(signal);
+            transitionValues.add(signal);
         }
 
         transition.setSensors(transitionSensors);
-        transition.setValues(transitionSignals);
+        transition.setValues(transitionValues);
 
         boolean isOrCondition = !ctx.condition().OR().isEmpty();
         transition.setMultipleOr(isOrCondition);
@@ -153,11 +237,9 @@ public class ModelBuilder extends ArduinomlBaseListener {
     public void enterInitialState(ArduinomlParser.InitialStateContext ctx) {
         String initialStateName = ctx.STRING().getText().replace("\"", "");
         State initialState = states.get(initialStateName);
-        if (initialState != null) {
-            theApp.setInitial(initialState);
-        } else {
+        if (initialState == null) {
             throw new RuntimeException("Initial state '" + initialStateName + "' not defined");
         }
+        theApp.setInitial(initialState);
     }
-
 }
