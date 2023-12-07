@@ -17,5 +17,5 @@ on {
 # Declaring transitions
 initial off
 
-from off to on when button1 becomes high and button2 becomes high
-from on to off when button1 becomes low
+from off to on when button1 becomes HIGH and button2 becomes HIGH
+from on to off when button1 becomes LOW

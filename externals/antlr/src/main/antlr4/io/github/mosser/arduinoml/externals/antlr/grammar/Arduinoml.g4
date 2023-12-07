@@ -4,7 +4,7 @@ grammar Arduinoml;
  ** Parser rules **
  ******************/
 
-root            :   declaration bricks states EOF;
+root : declaration bricks states initialState transitions EOF;
 
 declaration     :   APPLICATION name=IDENTIFIER;
 
@@ -14,21 +14,21 @@ bricks          :   (sensor | actuator)+;
     location    :   id=IDENTIFIER COLON port=PORT_NUMBER;
 
 states          :   state+;
-    state       :   initial? name=IDENTIFIER '{'  action* transition? '}';
+    state  : initial? name=IDENTIFIER '{' action* transition? '}';
     action      :   receiver=IDENTIFIER LEQ value=SIGNAL;
+    initialState : INITIAL name=IDENTIFIER;
     initial     :   ARROW;
+    transitions : transition+;
+        transition : FROM source=IDENTIFIER TO target=IDENTIFIER WHEN condition;
+        condition  : singleCondition ( (AND | OR) singleCondition )*;
+        singleCondition : sensorName=IDENTIFIER BECOMES value=SIGNAL;
+        compoundTransition : FROM source=IDENTIFIER TO target=IDENTIFIER WHEN condition;
 
-    transition  :   trigger=IDENTIFIER IS value=SIGNAL ARROW next=IDENTIFIER ;
-
-    compoundTransition : FROM source=IDENTIFIER TO target=IDENTIFIER WHEN condition;
-    condition   :   singleCondition ( (AND | OR) singleCondition )*;
-    singleCondition : sensorName=IDENTIFIER BECOMES value=SIGNAL;
 
 /*****************
  ** Lexer rules **
  *****************/
-
-// Définissez explicitement les tokens
+INITIAL         : 'initial';
 APPLICATION     : 'application';
 SENSOR          : 'sensor';
 ACTUATOR        : 'actuator';

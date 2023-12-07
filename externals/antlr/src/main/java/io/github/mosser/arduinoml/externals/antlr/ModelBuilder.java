@@ -114,14 +114,40 @@ public class ModelBuilder extends ArduinomlBaseListener {
     @Override
     public void enterTransition(ArduinomlParser.TransitionContext ctx) {
         Transition transition = new Transition();
-        Sensor sensor = sensors.get(ctx.trigger.getText());
-        SIGNAL signal = SIGNAL.valueOf(ctx.value.getText());
-        transition.setSensors(Collections.singletonList(sensor));
-        transition.setValues(Collections.singletonList(signal));
-        transition.setNext(states.get(ctx.next.getText()));
+        transition.setNext(states.get(ctx.target.getText()));
 
-        currentState.setTransition(transition);
+        List<Sensor> transitionSensors = new ArrayList<>();
+        List<SIGNAL> transitionSignals = new ArrayList<>();
+
+        for (ArduinomlParser.SingleConditionContext conditionCtx : ctx.condition().singleCondition()) {
+            Sensor sensor = sensors.get(conditionCtx.sensorName.getText());
+            SIGNAL signal = SIGNAL.valueOf(conditionCtx.value.getText());
+
+            transitionSensors.add(sensor);
+            transitionSignals.add(signal);
+        }
+
+        transition.setSensors(transitionSensors);
+        transition.setValues(transitionSignals);
+
+        boolean isOrCondition = ctx.condition().getText().contains("or");
+        transition.setMultipleOr(isOrCondition);
+
+        if (null == currentState) {
+            throw new RuntimeException("Transition defined outside of any state");
+        }
+
+        if (currentState.getTransition() != null) {
+            Binding binding = new Binding();
+            binding.to = ctx.target.getText();
+            binding.triggers = transitionSensors;
+            binding.value = transitionSignals.get(0);
+            bindings.put(currentState.getName(), binding);
+        } else {
+            currentState.setTransition(transition);
+        }
     }
+
 
     @Override
     public void enterCompoundTransition(ArduinomlParser.CompoundTransitionContext ctx) {
@@ -150,6 +176,17 @@ public class ModelBuilder extends ArduinomlBaseListener {
     @Override
     public void enterInitial(ArduinomlParser.InitialContext ctx) {
         this.theApp.setInitial(this.currentState);
+    }
+
+    @Override
+    public void enterInitialState(ArduinomlParser.InitialStateContext ctx) {
+        String initialStateName = ctx.name.getText();
+        State initialState = states.get(initialStateName);
+        if (initialState != null) {
+            theApp.setInitial(initialState);
+        } else {
+            throw new RuntimeException("Initial state '" + initialStateName + "' not defined");
+        }
     }
 
 }
