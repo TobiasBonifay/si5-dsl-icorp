@@ -10,7 +10,9 @@
 
 <transition> ::= "from" <state-name> "to" <state-name> "when" (<single-condition> | <compound-condition>)
 <single-condition> ::= <device-name> "becomes" <signal-value>
-<compound-condition> ::= <single-condition> (("and" | "or") <single-condition>)*
+<compound-condition> ::= <compound-and-condition> | <compound-or-condition>
+<compound-and-condition> ::= <single-condition> (("and" <single-condition>))+
+<compound-or-condition> ::= <single-condition> (("or" <single-condition>))+
 
 <export> ::= "export" <scenario-name>
 
