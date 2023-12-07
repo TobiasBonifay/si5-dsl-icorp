@@ -1,0 +1,28 @@
+application switch
+
+# declaring bricks
+sensor button: 9
+actuator led: 12
+actuator buzzer: 13
+
+# Declaring states
+on1 {
+    buzzer is LOW => HIGH
+    led is HIGH => LOW
+}
+on2 {
+    buzzer is HIGH => LOW
+    led is LOW => HIGH
+}
+
+-> off {
+    led <= LOW
+    buzzer <= LOW
+}
+
+# Declaring transitions
+# initial "off"
+
+# from "on1" to "on2" when "button" becomes "high"
+# from "on2" to "off" when "button" becomes "high"
+# from "off" to "on1" when "button" becomes "high"
