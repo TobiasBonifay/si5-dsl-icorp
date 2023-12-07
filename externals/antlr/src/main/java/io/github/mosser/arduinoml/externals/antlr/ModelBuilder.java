@@ -1,8 +1,7 @@
 package io.github.mosser.arduinoml.externals.antlr;
 
-import io.github.mosser.arduinoml.externals.antlr.grammar.*;
-
-
+import io.github.mosser.arduinoml.externals.antlr.grammar.ArduinomlBaseListener;
+import io.github.mosser.arduinoml.externals.antlr.grammar.ArduinomlParser;
 import io.github.mosser.arduinoml.kernel.App;
 import io.github.mosser.arduinoml.kernel.behavioral.Action;
 import io.github.mosser.arduinoml.kernel.behavioral.State;
@@ -10,10 +9,29 @@ import io.github.mosser.arduinoml.kernel.behavioral.Transition;
 import io.github.mosser.arduinoml.kernel.structural.Actuator;
 import io.github.mosser.arduinoml.kernel.structural.SIGNAL;
 import io.github.mosser.arduinoml.kernel.structural.Sensor;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.*;
 
 public class ModelBuilder extends ArduinomlBaseListener {
+
+    /**********************
+     ** Auxiliary fields **
+     **********************/
+
+    private String extractIdentifier(ArduinomlParser.IdentifierContext ctx) {
+        TerminalNode idNode = ctx.IDENTIFIER();
+        TerminalNode quotedIdNode = ctx.QUOTED_IDENTIFIER();
+
+        if (idNode != null) {
+            return idNode.getText();
+        } else if (quotedIdNode != null) {
+            String text = quotedIdNode.getText();
+            return text.substring(1, text.length() - 1); // Removes quotes
+        }
+        throw new RuntimeException("Unrecognized identifier format");
+    }
+
 
     /********************
      ** Business Logic **
@@ -23,7 +41,9 @@ public class ModelBuilder extends ArduinomlBaseListener {
     private boolean built = false;
 
     public App retrieve() {
-        if (built) { return theApp; }
+        if (built) {
+            return theApp;
+        }
         throw new RuntimeException("Cannot retrieve a model that was not created!");
     }
 
@@ -31,10 +51,10 @@ public class ModelBuilder extends ArduinomlBaseListener {
      ** Symbol tables **
      *******************/
 
-    private Map<String, List<Sensor>>   sensors   = new HashMap<>();
+    private Map<String, Sensor> sensors = new HashMap<>();
     private Map<String, Actuator> actuators = new HashMap<>();
-    private Map<String, State>    states  = new HashMap<>();
-    private Map<String, Binding>  bindings  = new HashMap<>();
+    private Map<String, State> states = new HashMap<>();
+    private Map<String, Binding> bindings = new HashMap<>();
 
     private class Binding { // used to support state resolution for transitions
         String to; // name of the next state, as its instance might not have been compiled yet
@@ -54,9 +74,10 @@ public class ModelBuilder extends ArduinomlBaseListener {
         theApp = new App();
     }
 
-    @Override public void exitRoot(ArduinomlParser.RootContext ctx) {
+    @Override
+    public void exitRoot(ArduinomlParser.RootContext ctx) {
         // Resolving states in transitions
-        bindings.forEach((key, binding) ->  {
+        bindings.forEach((key, binding) -> {
             Transition t = new Transition();
             t.setSensors(binding.triggers); //TODO: 1 transition -> 1..n sensors
             t.setValues(Collections.singletonList(binding.value)); //
@@ -68,30 +89,25 @@ public class ModelBuilder extends ArduinomlBaseListener {
 
     @Override
     public void enterDeclaration(ArduinomlParser.DeclarationContext ctx) {
-        theApp.setName(ctx.name.getText());
+        String name = extractIdentifier(ctx.identifier());
+        theApp.setName(name);
     }
 
     @Override
     public void enterSensor(ArduinomlParser.SensorContext ctx) {
         Sensor sensor = new Sensor();
-        sensor.setName(ctx.location().id.getText());
+        String sensorName = extractIdentifier(ctx.location().id());
+        sensor.setName(sensorName);
         sensor.setPin(Integer.parseInt(ctx.location().port.getText()));
         this.theApp.getBricks().add(sensor);
-        // sensors.put(sensor.getName(), sensor); // TODO: 1 sensor -> 1..n transitions
-
-        if (sensors.containsKey(sensor.getName())) {
-            sensors.get(sensor.getName()).add(sensor);
-        } else {
-            List<Sensor> list = new ArrayList<>();
-            list.add(sensor);
-            sensors.put(sensor.getName(), list);
-        }
+        sensors.put(sensor.getName(), sensor);
     }
 
     @Override
     public void enterActuator(ArduinomlParser.ActuatorContext ctx) {
         Actuator actuator = new Actuator();
-        actuator.setName(ctx.location().id.getText());
+        String actuatorName = extractIdentifier(ctx.location().id());
+        actuator.setName(actuatorName);
         actuator.setPin(Integer.parseInt(ctx.location().port.getText()));
         this.theApp.getBricks().add(actuator);
         actuators.put(actuator.getName(), actuator);
@@ -100,7 +116,8 @@ public class ModelBuilder extends ArduinomlBaseListener {
     @Override
     public void enterState(ArduinomlParser.StateContext ctx) {
         State local = new State();
-        local.setName(ctx.name.getText());
+        String stateName = extractIdentifier(ctx.name());
+        local.setName(stateName);
         this.currentState = local;
         this.states.put(local.getName(), local);
     }
@@ -121,13 +138,40 @@ public class ModelBuilder extends ArduinomlBaseListener {
 
     @Override
     public void enterTransition(ArduinomlParser.TransitionContext ctx) {
-        // Creating a placeholder as the next state might not have been compiled yet.
-        Binding toBeResolvedLater = new Binding();
-        toBeResolvedLater.to      = ctx.next.getText();
-        toBeResolvedLater.triggers = sensors.get(ctx.trigger.getText());
-        toBeResolvedLater.value = SIGNAL.valueOf(ctx.value.getText());
-        // iterate over values and add them to the list values
-        bindings.put(currentState.getName(), toBeResolvedLater);
+        Transition transition = new Transition();
+        String triggerName = extractIdentifier(ctx.trigger, ctx.quotedTrigger);
+        Sensor sensor = sensors.get(triggerName);
+        SIGNAL signal = SIGNAL.valueOf(ctx.value.getText());
+        transition.setSensors(Collections.singletonList(sensor));
+        transition.setValues(Collections.singletonList(signal));
+        String nextStateName = extractIdentifier(ctx.next, ctx.quotedNext);
+        transition.setNext(states.get(nextStateName));
+
+        currentState.setTransition(transition);
+    }
+
+    @Override
+    public void enterCompoundTransition(ArduinomlParser.CompoundTransitionContext ctx) {
+        Transition transition = new Transition();
+        String targetStateName = extractIdentifier(ctx.target, ctx.quotedTarget);
+        transition.setNext(states.get(targetStateName));
+
+        List<Sensor> transitionSensors = new ArrayList<>();
+        List<SIGNAL> transitionValues = new ArrayList<>();
+
+        for (ArduinomlParser.SingleConditionContext condition : ctx.condition().singleCondition()) {
+            String sensorName = extractIdentifier(condition.sensor, condition.quotedSensor);
+            Sensor sensor = sensors.get(sensorName);
+            SIGNAL signal = SIGNAL.valueOf(condition.value.getText());
+            transitionSensors.add(sensor);
+            transitionValues.add(signal);
+        }
+
+        transition.setSensors(transitionSensors);
+        transition.setValues(transitionValues);
+        transition.setMultipleOr(ctx.condition().getText().contains("or"));
+
+        currentState.setTransition(transition);
     }
 
     @Override

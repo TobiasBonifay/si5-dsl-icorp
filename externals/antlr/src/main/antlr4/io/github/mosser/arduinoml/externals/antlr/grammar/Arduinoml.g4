@@ -1,39 +1,57 @@
 grammar Arduinoml;
 
-
 /******************
  ** Parser rules **
  ******************/
 
-root            :   declaration bricks states EOF;
+root            :   declaration bricks states transitions EOF;
 
-declaration     :   'application' name=IDENTIFIER;
+declaration     :   APPLICATION identifier;
+identifier      :   IDENTIFIER | QUOTED_IDENTIFIER;
 
-bricks          :   (sensor|actuator)+;
-    sensor      :   'sensor'   location ;
-    actuator    :   'actuator' location ;
-    location    :   id=IDENTIFIER ':' port=PORT_NUMBER;
+bricks          :   (sensor | actuator)+;
+sensor          :   SENSOR location;
+actuator        :   ACTUATOR location;
+location        :   id=IDENTIFIER COLON port=PORT_NUMBER;
 
 states          :   state+;
-    state       :   initial? name=IDENTIFIER '{'  action+ transition '}';
-    action      :   receiver=IDENTIFIER '<=' value=SIGNAL;
-    transition  :   trigger=IDENTIFIER 'is' value=SIGNAL '=>' next=IDENTIFIER ;
-    initial     :   '->';
+state           :   initial? name=IDENTIFIER '{' action* '}';
+action          :   receiver=IDENTIFIER LEQ value=SIGNAL;
+initial         :   ARROW;
+
+transitions     :   transition+;
+transition      :   FROM source=IDENTIFIER TO target=IDENTIFIER WHEN condition;
+condition       :   singleCondition ( (AND | OR) singleCondition )*;
+singleCondition :   sensorName=IDENTIFIER BECOMES value=SIGNAL;
 
 /*****************
  ** Lexer rules **
  *****************/
 
-PORT_NUMBER     :   [1-9] | '11' | '12' | '13' | 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5';
-IDENTIFIER      :   LOWERCASE (LOWERCASE|UPPERCASE)+;
-SIGNAL          :   'HIGH' | 'LOW';
+APPLICATION     : 'application';
+SENSOR          : 'sensor';
+ACTUATOR        : 'actuator';
+COLON           : ':';
+PORT_NUMBER     : [1-9] | '10' | '11' | '12' | '13' | 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5';
+IDENTIFIER      : (LOWERCASE | UPPERCASE | DIGIT | '_' | '-')+;
+QUOTED_IDENTIFIER : '"' (LOWERCASE | UPPERCASE | DIGIT | '_' | '-')* '"';
+SIGNAL          : 'HIGH' | 'LOW';
+LEQ             : '<=';
+ARROW           : '->';
+FROM            : 'from';
+TO              : 'to';
+WHEN            : 'when';
+AND             : 'and';
+OR              : 'or';
+BECOMES         : 'becomes';
 
 /*************
  ** Helpers **
  *************/
 
-fragment LOWERCASE  : [a-z];                                 // abstract rule, does not really exists
+fragment LOWERCASE  : [a-z];
 fragment UPPERCASE  : [A-Z];
-NEWLINE             : ('\r'? '\n' | '\r')+      -> skip;
-WS                  : ((' ' | '\t')+)           -> skip;     // who cares about whitespaces?
-COMMENT             : '#' ~( '\r' | '\n' )*     -> skip;     // Single line comments, starting with a #
+fragment DIGIT      : [0-9];
+NEWLINE             : ('\r'? '\n' | '\r')+ -> skip;
+WS                  : [ \t]+ -> skip;
+COMMENT             : '#' ~[\r\n]* -> skip;

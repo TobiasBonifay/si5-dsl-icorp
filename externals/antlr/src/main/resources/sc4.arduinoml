@@ -21,8 +21,8 @@ on2 {
 }
 
 # Declaring transitions
-# initial "off"
+initial "off"
 
-# from "on1" to "on2" when "button" becomes "high"
-# from "on2" to "off" when "button" becomes "high"
-# from "off" to "on1" when "button" becomes "high"
+from "on1" to "on2" when "button" becomes "high"
+from "on2" to "off" when "button" becomes "high"
+from "off" to "on1" when "button" becomes "high"
