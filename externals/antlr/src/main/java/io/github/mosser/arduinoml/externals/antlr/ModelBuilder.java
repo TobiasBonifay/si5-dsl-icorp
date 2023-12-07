@@ -113,15 +113,28 @@ public class ModelBuilder extends ArduinomlBaseListener {
 
     @Override
     public void enterTransition(ArduinomlParser.TransitionContext ctx) {
+        String sourceStateName = ctx.STRING(0).getText().replace("\"", "");
+        String targetStateName = ctx.STRING(1).getText().replace("\"", "");
+
+        State sourceState = states.get(sourceStateName);
+        State targetState = states.get(targetStateName);
+
+        if (sourceState == null || targetState == null) {
+            throw new RuntimeException("State '" + (sourceState == null ? sourceStateName : targetStateName) + "' not defined");
+        }
+
         Transition transition = new Transition();
-        transition.setNext(states.get(ctx.STRING(1).getText().replace("\"", "")));
+        transition.setNext(targetState);
 
         List<Sensor> transitionSensors = new ArrayList<>();
         List<SIGNAL> transitionSignals = new ArrayList<>();
 
-        ArduinomlParser.ConditionContext conditionCtx = ctx.condition();
-        for (ArduinomlParser.SingleConditionContext singleCondition : conditionCtx.singleCondition()) {
-            Sensor sensor = sensors.get(singleCondition.STRING().getText().replace("\"", ""));
+        for (ArduinomlParser.SingleConditionContext singleCondition : ctx.condition().singleCondition()) {
+            String sensorName = singleCondition.STRING().getText().replace("\"", "");
+            Sensor sensor = sensors.get(sensorName);
+            if (sensor == null) {
+                throw new RuntimeException("Sensor '" + sensorName + "' not defined");
+            }
             SIGNAL signal = SIGNAL.valueOf(singleCondition.SIGNAL().getText());
 
             transitionSensors.add(sensor);
@@ -131,22 +144,9 @@ public class ModelBuilder extends ArduinomlBaseListener {
         transition.setSensors(transitionSensors);
         transition.setValues(transitionSignals);
 
-        boolean isOrCondition = !conditionCtx.OR().isEmpty();
+        boolean isOrCondition = !ctx.condition().OR().isEmpty();
         transition.setMultipleOr(isOrCondition);
-
-        if (null == currentState) {
-            throw new RuntimeException("Transition defined outside of any state");
-        }
-
-        if (currentState.getTransition() != null) {
-            Binding binding = new Binding();
-            binding.to = ctx.STRING(1).getText().replace("\"", "");
-            binding.triggers = transitionSensors;
-            binding.value = transitionSignals.get(0);
-            bindings.put(currentState.getName(), binding);
-        } else {
-            currentState.setTransition(transition);
-        }
+        sourceState.setTransition(transition);
     }
 
     @Override
