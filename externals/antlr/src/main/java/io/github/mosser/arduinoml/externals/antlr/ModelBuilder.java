@@ -12,26 +12,36 @@ import io.github.mosser.arduinoml.kernel.structural.Sensor;
 
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 /**
- * ModelBuilder is responsible for building the Arduino model based on ANTLR parser events.
+ * ModelBuilder handles the construction of an Arduino model based on ANTLR parser events.
  */
 public class ModelBuilder extends ArduinomlBaseListener {
 
     private App theApp;
     private boolean built = false;
 
-    private enum StateEnum {
-        AVAILABLE,
-        USED
+    /**
+     * Retrieves the constructed Arduino model.
+     * @return The built App object.
+     * @throws IllegalStateException if the model is not yet built.
+     */
+    public App retrieve() {
+        if (!built) {
+            throw new IllegalStateException("Model construction is not complete.");
+        }
+        return theApp;
     }
 
-    private static final Map<Integer, StateEnum> digitalPins = new HashMap<>();
-    private static final Map<Integer, StateEnum> analogPins = new HashMap<>();
+    private enum PinState { AVAILABLE, USED }
+
+    private static final Map<Integer, PinState> digitalPins = new HashMap<>();
+    private static final Map<Integer, PinState> analogPins = new HashMap<>();
 
     private static final String ANALOG = "analog";
     private static final String DIGITAL = "digital";
-    private static final Pattern IS_DIGIT = Pattern.compile("\\d+");
+    private static final Pattern DIGIT_PATTERN = Pattern.compile("\\d+");
     private static final int DIGITAL_PIN_START = 8;
     private static final int DIGITAL_PIN_END = 13;
     private static final int ANALOG_PIN_START = 1;
@@ -45,61 +55,51 @@ public class ModelBuilder extends ArduinomlBaseListener {
      * Initializes digital and analog pins as available.
      */
     private void initializePins() {
-        for (int i = DIGITAL_PIN_START; i <= DIGITAL_PIN_END; i++) {
-            digitalPins.put(i, StateEnum.AVAILABLE);
-        }
-        for (int i = ANALOG_PIN_START; i <= ANALOG_PIN_END; i++) {
-            analogPins.put(i, StateEnum.AVAILABLE);
-        }
+        IntStream.rangeClosed(DIGITAL_PIN_START, DIGITAL_PIN_END).forEach(i -> digitalPins.put(i, PinState.AVAILABLE));
+        IntStream.rangeClosed(ANALOG_PIN_START, ANALOG_PIN_END).forEach(i -> analogPins.put(i, PinState.AVAILABLE));
     }
 
     /**
-     * Parses the port string and assigns an available pin.
-     * @param port The port string to parse.
-     * @return The assigned pin number.
+     * Parses the port and assigns the appropriate pin.
+     * @param port String representing the port.
+     * @return Assigned pin number.
      */
     private int parsePort(String port) {
-        if (ANALOG.equalsIgnoreCase(port)) return findNextAvailablePin(ANALOG);
-        if (DIGITAL.equalsIgnoreCase(port)) return findNextAvailablePin(DIGITAL);
-        if (IS_DIGIT.matcher(port).matches()) return simpleParsing(port);
-        throw new RuntimeException("Invalid port: " + port);
+        return switch (port.toLowerCase()) {
+            case ANALOG -> assignNextAvailablePin(analogPins, ANALOG_PIN_START, ANALOG_PIN_END);
+            case DIGITAL -> assignNextAvailablePin(digitalPins, DIGITAL_PIN_START, DIGITAL_PIN_END);
+            default -> DIGIT_PATTERN.matcher(port).matches() ? assignExplicitPin(port) : null;
+        };
     }
 
     /**
-     * Finds the next available pin for a given port type.
-     * @param portType The type of port (analog or digital).
-     * @return The next available pin number.
+     * Assigns the next available pin from the specified range.
+     * @param pins Map of pin numbers to their states.
+     * @param start Start of the pin range.
+     * @param end End of the pin range.
+     * @return Assigned pin number.
      */
-    private int findNextAvailablePin(String portType) {
-        Map<Integer, StateEnum> pins = ANALOG.equalsIgnoreCase(portType) ? analogPins : digitalPins;
-        int startPin = ANALOG.equalsIgnoreCase(portType) ? ANALOG_PIN_START : DIGITAL_PIN_START;
-        int endPin = ANALOG.equalsIgnoreCase(portType) ? ANALOG_PIN_END : DIGITAL_PIN_END;
-
-        for (int i = startPin; i <= endPin; i++) {
-            if (pins.get(i) == StateEnum.AVAILABLE) {
-                pins.put(i, StateEnum.USED);
-                return i;
-            }
-        }
-        throw new RuntimeException("No more " + portType + " pins available");
+    private int assignNextAvailablePin(Map<Integer, PinState> pins, int start, int end) {
+        return IntStream.rangeClosed(start, end)
+                .filter(pin -> pins.get(pin) == PinState.AVAILABLE)
+                .peek(pin -> pins.put(pin, PinState.USED))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("No available pins in specified range"));
     }
 
     /**
-     * Parses a simple pin number.
-     * @param port The port string to parse.
-     * @return The parsed pin number.
+     * Assigns a specific pin if available.
+     * @param port String representing the port.
+     * @return Assigned pin number.
      */
-    private static int simpleParsing(String port) {
+    private int assignExplicitPin(String port) {
         int pin = Integer.parseInt(port);
-        if (pin >= DIGITAL_PIN_START && pin <= DIGITAL_PIN_END) {
-            if (digitalPins.get(pin) == StateEnum.AVAILABLE) {
-                digitalPins.put(pin, StateEnum.USED);
-                return pin;
-            } else {
-                throw new RuntimeException("Pin " + pin + " already used");
-            }
+        Map<Integer, PinState> pins = (pin >= DIGITAL_PIN_START && pin <= DIGITAL_PIN_END) ? digitalPins : analogPins;
+        if (pins.getOrDefault(pin, PinState.USED) == PinState.AVAILABLE) {
+            pins.put(pin, PinState.USED);
+            return pin;
         } else {
-            throw new RuntimeException("Invalid pin: " + pin);
+            throw new RuntimeException("Pin " + pin + " already used");
         }
     }
 
@@ -107,12 +107,12 @@ public class ModelBuilder extends ArduinomlBaseListener {
      ** Symbol tables **
      *******************/
 
-    private Map<String, Sensor> sensors = new HashMap<>();
-    private Map<String, Actuator> actuators = new HashMap<>();
-    private Map<String, State> states = new HashMap<>();
-    private Map<String, Binding> bindings = new HashMap<>();
+    private final Map<String, Sensor> sensors = new HashMap<>();
+    private final Map<String, Actuator> actuators = new HashMap<>();
+    private final Map<String, State> states = new HashMap<>();
+    private final Map<String, Binding> bindings = new HashMap<>();
 
-    private class Binding { // used to support state resolution for transitions
+    private static class Binding { // used to support state resolution for transitions
         String to; // name of the next state, as its instance might not have been compiled yet
         List<Sensor> triggers;
         SIGNAL value;
