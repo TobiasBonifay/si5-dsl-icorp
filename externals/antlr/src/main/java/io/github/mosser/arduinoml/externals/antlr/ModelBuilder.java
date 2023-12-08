@@ -1,8 +1,7 @@
 package io.github.mosser.arduinoml.externals.antlr;
 
-import io.github.mosser.arduinoml.externals.antlr.grammar.*;
-
-
+import io.github.mosser.arduinoml.externals.antlr.grammar.ArduinomlBaseListener;
+import io.github.mosser.arduinoml.externals.antlr.grammar.ArduinomlParser;
 import io.github.mosser.arduinoml.kernel.App;
 import io.github.mosser.arduinoml.kernel.behavioral.Action;
 import io.github.mosser.arduinoml.kernel.behavioral.State;
@@ -12,6 +11,7 @@ import io.github.mosser.arduinoml.kernel.structural.SIGNAL;
 import io.github.mosser.arduinoml.kernel.structural.Sensor;
 
 import java.util.*;
+import java.util.regex.Matcher;
 
 public class ModelBuilder extends ArduinomlBaseListener {
 
@@ -23,90 +23,85 @@ public class ModelBuilder extends ArduinomlBaseListener {
     private boolean built = false;
 
     public App retrieve() {
-        if (built) { return theApp; }
+        if (built) {
+            return theApp;
+        }
         throw new RuntimeException("Cannot retrieve a model that was not created!");
     }
 
-    private final Map<Integer, String> digitalPins = new HashMap<>();
-    private final Map<Integer, String> analogPins = new HashMap<>();
+    private enum STATE {
+        AVAILABLE,
+        USED
+    }
+
+    private static final Map<Integer, STATE> digitalPins = new HashMap<>();
+    private static final Map<Integer, STATE> analogPins = new HashMap<>();
+
+    private static final String ANALOG = "analog";
+    private static final String DIGITAL = "digital";
+    private static final Matcher IS_DIGIT = java.util.regex.Pattern.compile("\\d+").matcher("");
+    private static final int DIGITAL_PIN_START = 8;
+    private static final int DIGITAL_PIN_END = 13;
+    private static final int ANALOG_PIN_START = 1;
+    private static final int ANALOG_PIN_END = 5;
+
 
     public ModelBuilder() {
-        for (int i = 8; i <= 13; i++) {
-            digitalPins.put(i, "available");
+        System.out.println("Initializing pins");
+        // Initializing pins to FALSE (available)
+        for (int i = DIGITAL_PIN_START; i <= DIGITAL_PIN_END; i++) {
+            digitalPins.put(i, STATE.AVAILABLE);
         }
-        for (int i = 1; i <= 5; i++) {
-            analogPins.put(i, "available");
-        }
-    }
-
-    private int assignPin(String portType) throws RuntimeException {
-        if ("digital".equalsIgnoreCase(portType)) {
-            return digitalPins.entrySet().stream()
-                    .filter(entry -> "available".equals(entry.getValue()))
-                    .findFirst()
-                    .map(Map.Entry::getKey)
-                    .orElseThrow(() -> new RuntimeException("No available digital pins"));
-        } else if ("analog".equalsIgnoreCase(portType)) {
-            return analogPins.entrySet().stream()
-                    .filter(entry -> "available".equals(entry.getValue()))
-                    .findFirst()
-                    .map(Map.Entry::getKey)
-                    .orElseThrow(() -> new RuntimeException("No available analog pins"));
-        } else {
-            throw new RuntimeException("Invalid port type: " + portType);
-        }
-    }
-
-    private void markPinAsUsed(int pin, String portType) {
-        if ("digital".equalsIgnoreCase(portType)) {
-            digitalPins.put(pin, "used");
-        } else if ("analog".equalsIgnoreCase(portType)) {
-            analogPins.put(pin, "used");
+        for (int i = ANALOG_PIN_START; i <= ANALOG_PIN_END; i++) {
+            analogPins.put(i, STATE.AVAILABLE);
         }
     }
 
     private int parsePort(String port) {
-        // Check if the port is just a number (explicit port number)
-        if (port.matches("\\d+")) {
-            return Integer.parseInt(port);
-        }
+        System.out.println("Parsing port " + port);
+        if (ANALOG.equalsIgnoreCase(port)) return findNextAvailablePin(ANALOG);
+        if (DIGITAL.equalsIgnoreCase(port)) return findNextAvailablePin(DIGITAL);
+        if (IS_DIGIT.reset(port).matches()) return simpleParsing(port);
+        throw new RuntimeException("Invalid port " + port);
+    }
 
-        // Check if the port specifies the type without a number (automatic pin assignment)
-        if (port.equalsIgnoreCase("digital") || port.equalsIgnoreCase("analog")) {
-            return assignPin(port);
-        }
+    private int findNextAvailablePin(String portType) {
+        Map<Integer, STATE> pins = ANALOG.equalsIgnoreCase(portType) ? analogPins : digitalPins;
+        int startPin = ANALOG.equalsIgnoreCase(portType) ? ANALOG_PIN_START : DIGITAL_PIN_START;
+        int endPin = ANALOG.equalsIgnoreCase(portType) ? ANALOG_PIN_END : DIGITAL_PIN_END;
 
-        // Port type and number are specified
-        String[] parts = port.split(":");
-        if (parts.length != 2) {
-            throw new RuntimeException("Invalid port definition: " + port);
+        for (int i = startPin; i <= endPin; i++) {
+            if (pins.get(i) == STATE.AVAILABLE) {
+                pins.put(i, STATE.USED);
+                return i;
+            }
         }
-        String portType = parts[0];
-        int pin = Integer.parseInt(parts[1]);
-        if (pin < 0) {
-            throw new RuntimeException("Invalid pin number: " + pin);
-        }
-        if (pin > 13 && "digital".equalsIgnoreCase(portType)) {
-            throw new RuntimeException("Invalid digital pin number: " + pin);
-        }
-        if (pin > 5 && "analog".equalsIgnoreCase(portType)) {
-            throw new RuntimeException("Invalid analog pin number: " + pin);
-        }
-        if ("available".equalsIgnoreCase(digitalPins.get(pin)) && "available".equalsIgnoreCase(analogPins.get(pin))) {
-            markPinAsUsed(pin, portType);
-            return pin;
+        throw new RuntimeException("No more " + portType + " pins available");
+    }
+
+    private static int simpleParsing(String port) {
+        int pin = Integer.parseInt(port);
+        if (pin >= DIGITAL_PIN_START && pin <= DIGITAL_PIN_END) {
+            if (digitalPins.get(pin) == STATE.AVAILABLE) {
+                digitalPins.put(pin, STATE.USED);
+                return pin;
+            } else {
+                throw new RuntimeException("Pin " + pin + " already used");
+            }
         } else {
-            throw new RuntimeException("Pin " + pin + " is already used");
+            throw new RuntimeException("Invalid pin " + pin);
         }
     }
+
+
     /*******************
      ** Symbol tables **
      *******************/
 
-    private Map<String, Sensor>   sensors   = new HashMap<>();
+    private Map<String, Sensor> sensors = new HashMap<>();
     private Map<String, Actuator> actuators = new HashMap<>();
-    private Map<String, State>    states  = new HashMap<>();
-    private Map<String, Binding>  bindings  = new HashMap<>();
+    private Map<String, State> states = new HashMap<>();
+    private Map<String, Binding> bindings = new HashMap<>();
 
     private class Binding { // used to support state resolution for transitions
         String to; // name of the next state, as its instance might not have been compiled yet
@@ -126,9 +121,10 @@ public class ModelBuilder extends ArduinomlBaseListener {
         theApp = new App();
     }
 
-    @Override public void exitRoot(ArduinomlParser.RootContext ctx) {
+    @Override
+    public void exitRoot(ArduinomlParser.RootContext ctx) {
         // Resolving states in transitions
-        bindings.forEach((key, binding) ->  {
+        bindings.forEach((key, binding) -> {
             Transition t = new Transition();
             t.setSensors(binding.triggers); //TODO: 1 transition -> 1..n sensors
             t.setValues(Collections.singletonList(binding.value)); //
