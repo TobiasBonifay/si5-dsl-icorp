@@ -11,88 +11,97 @@ import io.github.mosser.arduinoml.kernel.structural.SIGNAL;
 import io.github.mosser.arduinoml.kernel.structural.Sensor;
 
 import java.util.*;
-import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+/**
+ * ModelBuilder is responsible for building the Arduino model based on ANTLR parser events.
+ */
 public class ModelBuilder extends ArduinomlBaseListener {
 
-    /********************
-     ** Business Logic **
-     ********************/
-
-    private App theApp = null;
+    private App theApp;
     private boolean built = false;
 
-    public App retrieve() {
-        if (built) {
-            return theApp;
-        }
-        throw new RuntimeException("Cannot retrieve a model that was not created!");
-    }
-
-    private enum STATE {
+    private enum StateEnum {
         AVAILABLE,
         USED
     }
 
-    private static final Map<Integer, STATE> digitalPins = new HashMap<>();
-    private static final Map<Integer, STATE> analogPins = new HashMap<>();
+    private static final Map<Integer, StateEnum> digitalPins = new HashMap<>();
+    private static final Map<Integer, StateEnum> analogPins = new HashMap<>();
 
     private static final String ANALOG = "analog";
     private static final String DIGITAL = "digital";
-    private static final Matcher IS_DIGIT = java.util.regex.Pattern.compile("\\d+").matcher("");
+    private static final Pattern IS_DIGIT = Pattern.compile("\\d+");
     private static final int DIGITAL_PIN_START = 8;
     private static final int DIGITAL_PIN_END = 13;
     private static final int ANALOG_PIN_START = 1;
     private static final int ANALOG_PIN_END = 5;
 
-
     public ModelBuilder() {
-        System.out.println("Initializing pins");
-        // Initializing pins to FALSE (available)
+        initializePins();
+    }
+
+    /**
+     * Initializes digital and analog pins as available.
+     */
+    private void initializePins() {
         for (int i = DIGITAL_PIN_START; i <= DIGITAL_PIN_END; i++) {
-            digitalPins.put(i, STATE.AVAILABLE);
+            digitalPins.put(i, StateEnum.AVAILABLE);
         }
         for (int i = ANALOG_PIN_START; i <= ANALOG_PIN_END; i++) {
-            analogPins.put(i, STATE.AVAILABLE);
+            analogPins.put(i, StateEnum.AVAILABLE);
         }
     }
 
+    /**
+     * Parses the port string and assigns an available pin.
+     * @param port The port string to parse.
+     * @return The assigned pin number.
+     */
     private int parsePort(String port) {
-        System.out.println("Parsing port " + port);
         if (ANALOG.equalsIgnoreCase(port)) return findNextAvailablePin(ANALOG);
         if (DIGITAL.equalsIgnoreCase(port)) return findNextAvailablePin(DIGITAL);
-        if (IS_DIGIT.reset(port).matches()) return simpleParsing(port);
-        throw new RuntimeException("Invalid port " + port);
+        if (IS_DIGIT.matcher(port).matches()) return simpleParsing(port);
+        throw new RuntimeException("Invalid port: " + port);
     }
 
+    /**
+     * Finds the next available pin for a given port type.
+     * @param portType The type of port (analog or digital).
+     * @return The next available pin number.
+     */
     private int findNextAvailablePin(String portType) {
-        Map<Integer, STATE> pins = ANALOG.equalsIgnoreCase(portType) ? analogPins : digitalPins;
+        Map<Integer, StateEnum> pins = ANALOG.equalsIgnoreCase(portType) ? analogPins : digitalPins;
         int startPin = ANALOG.equalsIgnoreCase(portType) ? ANALOG_PIN_START : DIGITAL_PIN_START;
         int endPin = ANALOG.equalsIgnoreCase(portType) ? ANALOG_PIN_END : DIGITAL_PIN_END;
 
         for (int i = startPin; i <= endPin; i++) {
-            if (pins.get(i) == STATE.AVAILABLE) {
-                pins.put(i, STATE.USED);
+            if (pins.get(i) == StateEnum.AVAILABLE) {
+                pins.put(i, StateEnum.USED);
                 return i;
             }
         }
         throw new RuntimeException("No more " + portType + " pins available");
     }
 
+    /**
+     * Parses a simple pin number.
+     * @param port The port string to parse.
+     * @return The parsed pin number.
+     */
     private static int simpleParsing(String port) {
         int pin = Integer.parseInt(port);
         if (pin >= DIGITAL_PIN_START && pin <= DIGITAL_PIN_END) {
-            if (digitalPins.get(pin) == STATE.AVAILABLE) {
-                digitalPins.put(pin, STATE.USED);
+            if (digitalPins.get(pin) == StateEnum.AVAILABLE) {
+                digitalPins.put(pin, StateEnum.USED);
                 return pin;
             } else {
                 throw new RuntimeException("Pin " + pin + " already used");
             }
         } else {
-            throw new RuntimeException("Invalid pin " + pin);
+            throw new RuntimeException("Invalid pin: " + pin);
         }
     }
-
 
     /*******************
      ** Symbol tables **
